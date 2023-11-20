@@ -18,20 +18,37 @@ PREFIX cito: <http://purl.org/spar/cito/>
 PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-SELECT ?label (COUNT(?citation) as ?cites) WHERE {{
+SELECT ?publlabel ?citingpublabel WHERE {{
   ?publ rdf:type dblp:Publication .
-  ?publ dblp:title ?title .
   ?publ dblp:doi <https://doi.org/{doi}> .
-  ?publ rdfs:label ?label .
-  ?publ dblp:doi ?doi .
+  ?publ dblp:doi ?publdoi .
+  ?publ rdfs:label ?publlabel .
   ?citation rdf:type cito:Citation .
-  ?citation cito:hasCitedEntity ?doi .
+  ?citation cito:hasCitedEntity ?publdoi .
+  ?citation cito:hasCitingEntity ?citingpubldoi .
+  OPTIONAL {{
+  ?citingpubl rdf:type dblp:Publication .
+  ?citingpubl dblp:doi ?citingpubldoi .
+  ?citingpubl rdfs:label ?citingpublabel .
+  }}
 }}
-GROUP BY ?label
 """
     )
     sparql.setReturnFormat(JSON)
     results = sparql.query().convert()
-    label = results["results"]["bindings"][0]["label"]["value"]
-    cites = results["results"]["bindings"][0]["cites"]["value"]
-    return HttpResponse(f"{label} has {cites} cites.")
+    publlabel = results["results"]["bindings"][0]["publlabel"]["value"]
+    citingpubllabels = []
+    for citingpubl in results["results"]["bindings"]:
+        try:
+            citingpubllabels.append(citingpubl["citingpublabel"]["value"])
+        except KeyError:
+            citingpubllabels.append("-")
+    return render(
+        request,
+        "paper/paper.html",
+        {
+            "publlabel": publlabel,
+            "cites_num": len(citingpubllabels),
+            "citingpubllabels": citingpubllabels,
+        },
+    )

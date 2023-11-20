@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ publlabel }}</title>
+</head>
+
+<body>
+    <p>{{ publlabel }} has {{ cites_num }} cites.</p>
+
+    <p>The citing publications are:</p>
+
+    <ul>
+        {% for label in citingpubllabels %}
+        <li>{{ label }}</li>
+        {% endfor %}
+    </ul>
+
+</body>
+
+</html>
