@@ -1,15 +1,21 @@
 from django.shortcuts import render
 
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseNotFound
 
 from SPARQLWrapper import SPARQLWrapper, JSON
 
 
 def index(request):
-    return HttpResponse("Hello, world. You're at the paper index.")
+    return render(request, "paper/index.html")
 
 
-def paper(request, doi):
+def get_doi(doi_url):
+    # get url path without the domain
+    doi = doi_url.split("doi.org/")[-1]
+    return doi
+
+
+def get_citations(doi):
     sparql = SPARQLWrapper("https://sparql.dblp.org/sparql")
     sparql.setQuery(
         f"""
@@ -18,7 +24,7 @@ PREFIX cito: <http://purl.org/spar/cito/>
 PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-SELECT ?publlabel ?citingpublabel WHERE {{
+SELECT * WHERE {{
   ?publ rdf:type dblp:Publication .
   ?publ dblp:doi <https://doi.org/{doi}> .
   ?publ dblp:doi ?publdoi .
@@ -36,19 +42,106 @@ SELECT ?publlabel ?citingpublabel WHERE {{
     )
     sparql.setReturnFormat(JSON)
     results = sparql.query().convert()
-    publlabel = results["results"]["bindings"][0]["publlabel"]["value"]
-    citingpubllabels = []
-    for citingpubl in results["results"]["bindings"]:
-        try:
-            citingpubllabels.append(citingpubl["citingpublabel"]["value"])
-        except KeyError:
-            citingpubllabels.append("-")
-    return render(
-        request,
-        "paper/paper.html",
-        {
-            "publlabel": publlabel,
-            "cites_num": len(citingpubllabels),
-            "citingpubllabels": citingpubllabels,
-        },
+    return results["results"]["bindings"]
+
+
+def get_publication_authors(doi):
+    sparql = SPARQLWrapper("https://sparql.dblp.org/sparql")
+    sparql.setQuery(
+        f"""
+PREFIX dblp: <https://dblp.org/rdf/schema#>
+PREFIX cito: <http://purl.org/spar/cito/>
+PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT * WHERE {{
+  ?publ rdf:type dblp:Publication .
+  ?publ dblp:doi <https://doi.org/{doi}> .
+  ?publ dblp:authoredBy ?author .
+  ?author rdfs:label ?name .
+}}
+"""
     )
+    sparql.setReturnFormat(JSON)
+    results = sparql.query().convert()
+    # return author names
+    return [result["name"]["value"] for result in results["results"]["bindings"]]
+
+
+def get_publication_info(doi):
+    authors = get_publication_authors(doi)
+    sparql = SPARQLWrapper("https://sparql.dblp.org/sparql")
+    sparql.setQuery(
+        f"""
+PREFIX dblp: <https://dblp.org/rdf/schema#>
+PREFIX cito: <http://purl.org/spar/cito/>
+PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT * WHERE {{
+  ?publ rdf:type dblp:Publication .
+  ?publ dblp:doi <https://doi.org/{doi}> .
+  ?publ rdfs:label ?publlabel .
+  ?publ dblp:publishedIn ?source .
+}}
+"""
+    )
+    sparql.setReturnFormat(JSON)
+    result = sparql.query().convert()["results"]["bindings"][0]
+    return {
+        "label": result["publlabel"]["value"],
+        "source": result["source"]["value"],
+        "doi_url": f"https://doi.org/{doi}",
+        "authors": authors,
+    }
+
+
+def paper(request, doi):
+    citing_papers = get_citations(doi)
+    try:
+        publication_info = get_publication_info(doi)
+    except IndexError:
+        return HttpResponseNotFound("Paper not found")
+    publlabel = publication_info["label"]
+    publdoi = publication_info["doi_url"]
+    publauthors = publication_info["authors"]
+    publsource = publication_info["source"]
+    if len(citing_papers) > 0:
+        citingpubls = []
+        for citingpubl in citing_papers:
+            try:
+                citingpubls.append(
+                    {
+                        "label": citingpubl["citingpublabel"]["value"],
+                        "doi": get_doi(citingpubl["citingpubldoi"]["value"]),
+                    }
+                )
+            except KeyError:
+                citingpubls.append(
+                    {"label": "-", "doi": get_doi(citingpubl["citingpubldoi"]["value"])}
+                )
+        return render(
+            request,
+            "paper/paper.html",
+            {
+                "publlabel": publlabel,
+                "cites_num": len(citingpubls),
+                "citingpubls": citingpubls,
+                "publdoi": publdoi,
+                "publauthors": publauthors,
+                "publsource": publsource,
+            },
+        )
+    else:
+        return render(
+            request,
+            "paper/paper.html",
+            {
+                "publlabel": publlabel,
+                "cites_num": 0,
+                "citingpubls": [],
+                "publdoi": publdoi,
+                "publauthors": publauthors,
+                "publsource": publsource,
+            },
+        )

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Know Your Paper</title>
+</head>
+
+<body>
+    <h1>Know Your Paper</h1>
+    <p>Enter the DOI URL: <input type="text"> <input type="button" value="Submit"></p>
+
+    <script>
+        function getDoi(doiUrl) {
+            // get url path without the domain
+            let doi = doiUrl.split("doi.org/").pop();
+            return doi;
+        }
+        // Select the button
+        var button = document.querySelector('input[type="button"]');
+
+        // Add click event listener to the button
+
+        button.addEventListener('click', function () {
+            // Select the input
+            var input = document.querySelector('input[type="text"]');
+
+            // Get the URL
+            var url = input.value;
+
+            // Redirect the user to the URL
+            console.log(getDoi(url));
+            window.location.href = getDoi(url);
+        });
+    </script>
+</body>
+
+</html>
