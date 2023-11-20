@@ -10,13 +10,26 @@
 <body>
     <p>{{ publlabel }} has {{ cites_num }} cites.</p>
 
+    <p>The publication was published in {{ publsource }}.</p>
+
+    <p>The authors of this publication are:</p>
+
+    <ul>
+        {% for author in publauthors %}
+        <li>{{ author }}</li>
+        {% endfor %}
+    </ul>
+
+    <p><a href={{ publdoi }}>View paper</a></p>
+    {% if citingpubls %}
     <p>The citing publications are:</p>
 
     <ul>
-        {% for label in citingpubllabels %}
-        <li>{{ label }}</li>
+        {% for citingpubl in citingpubls %}
+        <li><a href="/{{citingpubl.doi}}">{{ citingpubl.label }}</a></li>
         {% endfor %}
     </ul>
+    {% endif %}
 
 </body>
 
