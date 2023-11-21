@@ -83,6 +83,7 @@ SELECT * WHERE {{
   ?publ dblp:doi <https://doi.org/{doi}> .
   ?publ rdfs:label ?publlabel .
   ?publ dblp:publishedIn ?source .
+  ?publ dblp:title ?publtitle .
 }}
 """
     )
@@ -93,6 +94,7 @@ SELECT * WHERE {{
         "source": result["source"]["value"],
         "doi_url": f"https://doi.org/{doi}",
         "authors": authors,
+        "title": result["publtitle"]["value"]
     }
 
 
@@ -106,6 +108,7 @@ def paper(request, doi):
     publdoi = publication_info["doi_url"]
     publauthors = publication_info["authors"]
     publsource = publication_info["source"]
+    publtitle = publication_info["title"]
     if len(citing_papers) > 0:
         citingpubls = []
         for citingpubl in citing_papers:
@@ -130,6 +133,7 @@ def paper(request, doi):
                 "publdoi": publdoi,
                 "publauthors": publauthors,
                 "publsource": publsource,
+                "publtitle": publtitle,
             },
         )
     else:
@@ -143,5 +147,6 @@ def paper(request, doi):
                 "publdoi": publdoi,
                 "publauthors": publauthors,
                 "publsource": publsource,
+                "publtitle": publtitle,
             },
         )
