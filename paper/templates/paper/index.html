@@ -9,7 +9,11 @@
 
 <body>
     <h1>Know Your Paper</h1>
-    <p>Enter the DOI URL: <input type="text"> <input type="button" value="Submit"></p>
+    <p>Know your paper is a platform to obtain valuable information about a research publication using the power of the
+        semantic web.</p>
+    <p>Enter the DOI URL of the publication:</p>
+    <p><input type="text" size="50"></p>
+    <p><input type="button" value="Submit"></p>
 
     <script>
         function getDoi(doiUrl) {
@@ -26,12 +30,19 @@
             // Select the input
             var input = document.querySelector('input[type="text"]');
 
-            // Get the URL
-            var url = input.value;
+            // if url does not start with https://doi.org/ then raise error
+            if (!input.value.startsWith("https://doi.org/")) {
+                alert("Please enter a valid DOI URL");
+            } else {
+                // Get the URL
+                var url = input.value;
 
-            // Redirect the user to the URL
-            console.log(getDoi(url));
-            window.location.href = getDoi(url);
+                // Redirect the user to the URL
+                console.log(getDoi(url));
+                window.location.href = getDoi(url);
+            }
+
+
         });
     </script>
 </body>
